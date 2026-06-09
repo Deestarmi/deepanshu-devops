@@ -1,0 +1,21 @@
+# Ingress — routes external HTTP traffic into the cluster
+# nginx-ingress controller must be installed first (Step 5 in runbook)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devops101-ingress
+  namespace: dev
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: devops101-svc
+                port:
+                  number: 80

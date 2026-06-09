@@ -1,0 +1,24 @@
+# QA override
+replicaCount: 2
+
+image:
+  tag: "latest"      # CI updates this on PR merge
+
+app:
+  env: "qa"
+  version: "latest"
+  color: "#EF9F27"   # orange
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "96Mi"
+  limits:
+    cpu: "300m"
+    memory: "192Mi"
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  cpuTarget: 60

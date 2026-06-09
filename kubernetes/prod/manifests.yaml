@@ -1,0 +1,79 @@
+# PROD namespace — red color, 2 replicas, stricter resource limits
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops101-config
+  namespace: prod
+data:
+  APP_ENV: "production"
+  APP_VERSION: "v1"
+  APP_COLOR: "#E24B4A"   # red = prod
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops101
+  namespace: prod
+  labels:
+    app: devops101
+    env: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: devops101
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0    # zero downtime rolling update
+  template:
+    metadata:
+      labels:
+        app: devops101
+        env: prod
+    spec:
+      containers:
+        - name: devops101
+          image: YOUR_DOCKERHUB_USERNAME/devops101:latest   # ← replace
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: devops101-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "96Mi"
+            limits:
+              cpu: "300m"
+              memory: "192Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops101-svc
+  namespace: prod
+spec:
+  selector:
+    app: devops101
+  ports:
+    - port: 80
+      targetPort: 5000
+  type: ClusterIP

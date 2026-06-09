@@ -1,0 +1,85 @@
+# Apply all 3 with: kubectl apply -f gitops/argocd-apps.yaml
+# ─────────────────────────────────────────────────────────────────
+
+# DEV — auto sync on every git push
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devops101-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_GITHUB_USERNAME/devops-101  # ← update
+    targetRevision: HEAD
+    path: helm/devops101
+    helm:
+      valueFiles:
+        - ../../gitops/dev/values-dev.yaml
+      set:
+        - name: image.repository
+          value: YOUR_DOCKERHUB_USERNAME/devops101               # ← update
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# QA — auto sync on main branch
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devops101-qa
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_GITHUB_USERNAME/devops-101  # ← update
+    targetRevision: HEAD
+    path: helm/devops101
+    helm:
+      valueFiles:
+        - ../../gitops/qa/values-qa.yaml
+      set:
+        - name: image.repository
+          value: YOUR_DOCKERHUB_USERNAME/devops101               # ← update
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: qa
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+# PROD — manual sync only (you press the button in Argo CD UI)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devops101-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/YOUR_GITHUB_USERNAME/devops-101  # ← update
+    targetRevision: HEAD
+    path: helm/devops101
+    helm:
+      valueFiles:
+        - ../../gitops/prod/values-prod.yaml
+      set:
+        - name: image.repository
+          value: YOUR_DOCKERHUB_USERNAME/devops101               # ← update
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+  # NO syncPolicy here = manual sync only
+  syncOptions:
+    - CreateNamespace=true

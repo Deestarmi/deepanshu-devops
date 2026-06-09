@@ -1,0 +1,13 @@
+# Dev override — CI updates image.tag automatically on every push
+replicaCount: 1
+
+image:
+  tag: "latest"      # CI replaces this with git SHA
+
+app:
+  env: "dev"
+  version: "latest"
+  color: "#1D9E75"   # green
+
+hpa:
+  enabled: false

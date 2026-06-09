@@ -1,0 +1,81 @@
+# ──────────────────────────────────────────────────────────────────
+# STEP 3 — Plain Kubernetes YAML (before Helm)
+# Apply with: kubectl apply -f kubernetes/dev/
+# This teaches you raw K8s before adding Helm on top.
+# ──────────────────────────────────────────────────────────────────
+
+# ConfigMap — environment variables for the app
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops101-config
+  namespace: dev
+data:
+  APP_ENV: "dev"
+  APP_VERSION: "v1"
+  APP_COLOR: "#1D9E75"   # green = dev
+
+---
+# Deployment — tells K8s how many pods to run and what image to use
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops101
+  namespace: dev
+  labels:
+    app: devops101
+    env: dev
+spec:
+  replicas: 1                  # just 1 pod in dev
+  selector:
+    matchLabels:
+      app: devops101
+  template:
+    metadata:
+      labels:
+        app: devops101
+        env: dev
+    spec:
+      containers:
+        - name: devops101
+          image: YOUR_DOCKERHUB_USERNAME/devops101:latest   # ← replace
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: devops101-config
+          resources:
+            requests:
+              cpu: "50m"        # 0.05 CPU cores  — small for playground
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          livenessProbe:        # K8s restarts pod if this fails
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:       # K8s only sends traffic when this passes
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+# Service — gives the pod a stable network address inside the cluster
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops101-svc
+  namespace: dev
+spec:
+  selector:
+    app: devops101
+  ports:
+    - port: 80
+      targetPort: 5000
+  type: ClusterIP             # internal only; ingress routes external traffic

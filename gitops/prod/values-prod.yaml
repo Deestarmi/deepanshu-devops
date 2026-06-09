@@ -1,0 +1,25 @@
+# Prod override — image tag set MANUALLY by engineer before promoting
+replicaCount: 2
+
+image:
+  tag: "SET_ME"        # ← engineer manually sets this before Argo sync
+  pullPolicy: IfNotPresent
+
+app:
+  env: "production"
+  version: "SET_ME"    # ← same tag
+  color: "#E24B4A"     # red
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "96Mi"
+  limits:
+    cpu: "300m"
+    memory: "192Mi"
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 2
+  cpuTarget: 70

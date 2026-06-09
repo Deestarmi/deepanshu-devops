@@ -1,0 +1,77 @@
+# QA namespace — notice the differences from dev:
+#  - replicas: 2
+#  - APP_COLOR: orange (so you can visually see which env you're on)
+#  - resource limits are higher
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops101-config
+  namespace: qa
+data:
+  APP_ENV: "qa"
+  APP_VERSION: "v1"
+  APP_COLOR: "#EF9F27"   # orange = qa
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops101
+  namespace: qa
+  labels:
+    app: devops101
+    env: qa
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: devops101
+  template:
+    metadata:
+      labels:
+        app: devops101
+        env: qa
+    spec:
+      containers:
+        - name: devops101
+          image: YOUR_DOCKERHUB_USERNAME/devops101:latest   # ← replace
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: devops101-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "96Mi"
+            limits:
+              cpu: "300m"
+              memory: "192Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devops101-svc
+  namespace: qa
+spec:
+  selector:
+    app: devops101
+  ports:
+    - port: 80
+      targetPort: 5000
+  type: ClusterIP
