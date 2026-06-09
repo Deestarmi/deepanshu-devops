@@ -47,15 +47,17 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:  
           image-ref:      "${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}"
-          format:         "table"
+          format:         "sarif"
           severity:       "CRITICAL,HIGH"
           exit-code:      "1"
           ignore-unfixed: "true"
+
       - name: Upload trivy scan results as artifact
-        if: always() # Ensure this step runs even if the previous step fails
-        uses: github/codeql-action/upload-artifact@v3
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: trivy.sarif
+          name: trivy-scan-results
+          path: trivy.sarif
       - name: Push image to Docker Hub
         run: |
           docker push ${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}
