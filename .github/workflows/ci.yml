@@ -1,64 +1,90 @@
-name: CI - Build , Trivy scan , Push to docker hub of the image
+name: CI - Build, Trivy Scan, Push to Docker Hub
+
 on:
   push:
     branches: ["main", "feature/**"]
   pull_request:
     branches: ["main"]
+
 env:
   IMAGE: ${{ secrets.DOCKER_USERNAME }}/devops-101
+
 jobs:
   build-scan-push:
-    name: Build -> scan -> Push
+    name: Build -> Scan -> Push
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write        # needs write to push GitOps commit back
       security-events: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: set image tag from git SHA
-        id : tag
-        run: | 
+
+      - name: Set image tag from git SHA
+        id: tag
+        run: |
           echo "SHA=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
           echo "Building tag: ${GITHUB_SHA::8}"
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3 
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to Docker Hub
-        uses: docker/login-action@v2 
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./app
-          file: ./docker/Dockerfile
-          push: false
-          load: true
+          file:    ./docker/Dockerfile
+          push:    false
+          load:    true
           tags: |
             ${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}
             ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to:   type=gha,mode=max
+
+      # ── FIX: use format: table so exit-code works ──────────────────────────
+      # sarif format does NOT support exit-code — it silently ignores it,
+      # which means the step never actually fails on vulnerabilities.
       - name: Trivy - Scan for vulnerabilities
         uses: aquasecurity/trivy-action@master
-        with:  
+        with:
           image-ref:      "${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}"
-          format:         "sarif"
+          format:         "table"
           severity:       "CRITICAL,HIGH"
           exit-code:      "1"
           ignore-unfixed: "true"
 
-      - name: Upload trivy scan results as artifact
+      # ── Separate step for the artifact (sarif, no exit-code) ──────────────
+      - name: Trivy - Generate SARIF for artifact
+        if: always()
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref:      "${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}"
+          format:         "sarif"
+          output:         "trivy.sarif"       # ← was missing in your version
+          severity:       "CRITICAL"
+          ignore-unfixed: "true"
+
+      - name: Upload Trivy scan results as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-scan-results
           path: trivy.sarif
+
+      # ── Only runs if Trivy passed ──────────────────────────────────────────
       - name: Push image to Docker Hub
         run: |
           docker push ${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}
           docker push ${{ env.IMAGE }}:latest
+          echo "✅ Pushed: ${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}"
