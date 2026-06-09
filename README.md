@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # DevOps 101 — Learn Tools One at a Time
 
 A minimal app built specifically for learning DevOps tools in order.
@@ -45,3 +46,7 @@ devops-101/
 - Max nodes: **2**
 - Disable Container Insights + Alerting when creating AKS
 - Use your existing **ODL-* resource group**
+=======
+# deepanshu-devops
+Deepanshu Project
+>>>>>>> 1f7d10d248a8a293d9ffc207e45ef030ee105ca2
