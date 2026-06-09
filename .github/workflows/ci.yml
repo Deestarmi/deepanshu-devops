@@ -45,6 +45,7 @@ jobs:
           cache-to:   type=gha,mode=max
       - name: Trivy - Scan for vulnerabilities
         uses: aquasecurity/trivy-action@master
+        with:  
           image-ref:      "${{ env.IMAGE }}:${{ steps.tag.outputs.SHA }}"
           format:         "table"
           severity:       "CRITICAL,HIGH"
